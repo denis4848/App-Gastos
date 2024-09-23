@@ -2,6 +2,9 @@ package view
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,18 +20,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -42,9 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import database.Transaction
+import kotlinx.coroutines.delay
 import viewModel.MainViewModel
-
-
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -54,6 +60,7 @@ fun MainView(viewModel: MainViewModel) {
     val allItems by viewModel.obtenerTodasLasTransacciones().observeAsState(emptyList())
 
     var showDialog by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
     var selectedOption by remember { mutableStateOf("Gasto") }
     var title by remember { mutableStateOf("") }
@@ -85,12 +92,15 @@ fun MainView(viewModel: MainViewModel) {
 
             LazyColumn {
                 items(allItems) { transaction ->
-                    ItemList(name = transaction.name, time = transaction.date) // Usa las propiedades correctas
+                    ItemList(transaction, viewModel) {
+                        viewModel.eliminarTransaccion(transaction)
+                    }
                 }
             }
+
         }
 
-        // Botón flotante para abrir el popup
+        // Botón flotante para abrir el diálogo
         FloatingActionButton(
             onClick = { showDialog = true },
             contentColor = Color.White,
@@ -102,19 +112,17 @@ fun MainView(viewModel: MainViewModel) {
             Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
         }
 
-        // Mostrar el Popup cuando showPopup sea verdadero
+        // Diálogo para añadir nuevo gasto
         if (showDialog) {
             Dialog(
-                onDismissRequest = { showDialog = false }, // Cierra el popup cuando se haga clic fuera
-
+                onDismissRequest = { showDialog = false },
             ) {
-                // Contenido del popup
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth(0.9f) // Ancho del 90% de la pantalla
+                        .fillMaxWidth(0.9f)
                         .padding(16.dp),
                     shape = MaterialTheme.shapes.medium,
-                    color = Color.White,
+                    color= Color.White,
                     shadowElevation = 8.dp
                 ) {
                     Column(
@@ -127,10 +135,9 @@ fun MainView(viewModel: MainViewModel) {
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
 
-                        // Aquí puedes añadir más campos, como TextField para entrada de texto
                         OutlinedTextField(
                             value = title,
-                            onValueChange = { title = it }, // Actualiza el estado con el nuevo valor
+                            onValueChange = { title = it },
                             label = { Text("Título") },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -138,8 +145,8 @@ fun MainView(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedTextField(
-                            value = description, // Aquí puedes agregar el estado para el campo
-                            onValueChange = { description = it/* Actualiza el estado con el valor ingresado */ },
+                            value = description,
+                            onValueChange = { description = it },
                             label = { Text("Descripción") },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -147,15 +154,13 @@ fun MainView(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedTextField(
-                            value = amount, // Otro campo de texto para cantidad, etc.
-                            onValueChange = {amount = it /* Actualiza el estado con el valor ingresado */ },
-                            label = { Text("Cantidad") },
+                            value = amount,
+                            onValueChange = { amount = it },
+                            label = { Text("Precio") },
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
-
-
 
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Button(
@@ -195,7 +200,7 @@ fun MainView(viewModel: MainViewModel) {
                                         selectedOption = "Gasto"
                                         expanded = false
                                     },
-                                    modifier = Modifier.background(Color(0xFFF5F5F5)) // Fondo de los ítems del menú
+                                    modifier = Modifier.background(Color(0xFFF5F5F5))
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Ingreso") },
@@ -203,7 +208,7 @@ fun MainView(viewModel: MainViewModel) {
                                         selectedOption = "Ingreso"
                                         expanded = false
                                     },
-                                    modifier = Modifier.background(Color(0xFFF5F5F5)) // Fondo de los ítems del menú
+                                    modifier = Modifier.background(Color(0xFFF5F5F5))
                                 )
                             }
                         }
@@ -220,9 +225,22 @@ fun MainView(viewModel: MainViewModel) {
 
                             Button(
                                 onClick = {
-                                    val item = Transaction(name = title, description = description,date= viewModel.obtenerFechaHoraActual(), amount =  amount.toDouble(),type = selectedOption)
-                                    viewModel.insertarTransaccion(item)
-                                    showDialog = false // Cierra el popup
+                                    if (title.isBlank() || description.isBlank() || amount.isBlank()) {
+                                        showErrorDialog = true
+                                    } else {
+                                        val item = Transaction(
+                                            name = title,
+                                            description = description,
+                                            date = viewModel.obtenerFechaHoraActual(),
+                                            amount = amount.toDouble(),
+                                            type = selectedOption
+                                        )
+                                        viewModel.insertarTransaccion(item)
+                                        showDialog = false
+                                        title = ""
+                                        description = ""
+                                        amount = ""
+                                    }
                                 }
                             ) {
                                 Text(text = "Añadir")
@@ -232,32 +250,65 @@ fun MainView(viewModel: MainViewModel) {
                 }
             }
         }
-    } // Box1
+
+        // Diálogo de error
+        AnimatedVisibility(
+            visible = showErrorDialog,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            AlertDialog(
+                onDismissRequest = { showErrorDialog = false },
+                title = { Text("Error") },
+                text = { Text("Todos los campos son obligatorios.") },
+                confirmButton = {}
+            )
+        }
+
+        // Cerrar el diálogo automáticamente después de 3 segundos
+        LaunchedEffect(key1 = showErrorDialog) {
+            if (showErrorDialog) {
+                delay(500)
+                showErrorDialog = false
+            }
+        }
+
+    }
 }
 
 
 
 
 
-
-
-
-
 @Composable
-fun ItemList(name: String, time: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = time,
-            color = Color(0xFF02144B),
-            fontSize = 12.sp,
-            fontWeight = FontWeight(weight = 880), modifier = Modifier.padding(end = 16.dp)
-        )
-        Text(
-            text = name,
-            fontSize = 20.sp,
-            fontWeight = FontWeight(weight = 400),
-            modifier = Modifier.padding(vertical = 5.dp)
-        )
+fun ItemList(
+    transaction: Transaction,
+    viewModel: MainViewModel,
+    onDeleteClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween, // Add this line
+        modifier = Modifier.fillMaxWidth() // Add this line
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = transaction.date,
+                color = Color(0xFF02144B),
+                fontSize = 12.sp,
+                fontWeight = FontWeight(weight = 880),
+                modifier = Modifier.padding(end = 16.dp)
+            )
+            Text(
+                text = transaction.name,
+                fontSize = 20.sp,
+                fontWeight = FontWeight(weight = 400),
+                modifier = Modifier.padding(vertical = 5.dp)
+            )
+        }
+        IconButton(onClick = onDeleteClick) {
+            Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Red)
+        }
     }
 }
 

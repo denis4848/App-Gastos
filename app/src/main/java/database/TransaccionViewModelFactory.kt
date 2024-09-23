@@ -1,7 +1,6 @@
 package database
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import database.TransaccionDao
 import viewModel.MainViewModel
 
 class TransaccionViewModelFactory(private val transaccionDao: TransaccionDao) : ViewModelProvider.Factory {

@@ -54,24 +54,22 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation(platform(libs.androidx.compose.bom)) // Esto asegura que uses la misma versión para todas las librerías de Compose
+    implementation(libs.androidx.ui) // Cambia 'androidx.ui' por 'androidx.compose.ui'
+    implementation(libs.androidx.material3) // Asegúrate de que estás usando Material3
+    implementation(libs.androidx.ui.tooling.preview) // Cambia 'androidx.ui.tooling.preview' por 'androidx.compose.ui.tooling.preview'
     implementation(libs.androidx.runtime.livedata)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom)) // Esto asegura que las pruebas usen la misma versión de Compose
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    //Room
+
+    // Room
     implementation(libs.androidx.room.runtime)
-    //noinspection KaptUsageInsteadOfKsp
-    kapt(libs.androidx.room.compiler) // Use kapt here
+    kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.kotlinx.coroutines.android)
-
 }
