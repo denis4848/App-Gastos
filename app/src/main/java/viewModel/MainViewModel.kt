@@ -4,8 +4,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
-import androidx.room.Room
-import database.AppDatabase
 import database.TransaccionDao
 import database.Transaction
 import model.DateTimeModel

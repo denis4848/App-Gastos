@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         ).build()
         transaccionDao = database.transaccionDao()
 
-        val mainViewModel = ViewModelProvider(this, TransaccionViewModelFactory(transaccionDao)).get(MainViewModel::class.java)
+        val mainViewModel = ViewModelProvider(this, TransaccionViewModelFactory(transaccionDao))[MainViewModel::class.java]
 
         setContent {
             MainView(viewModel = mainViewModel)

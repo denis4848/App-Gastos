@@ -69,7 +69,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     //Room
     implementation(libs.androidx.room.runtime)
+    //noinspection KaptUsageInsteadOfKsp
     kapt(libs.androidx.room.compiler) // Use kapt here
     implementation(libs.androidx.room.ktx)
+    implementation(libs.kotlinx.coroutines.android)
 
 }
