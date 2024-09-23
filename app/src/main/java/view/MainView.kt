@@ -1,5 +1,6 @@
 package view
 
+import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -30,18 +31,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import database.TransaccionDao
+import database.TransaccionViewModelFactory
+import database.Transaction
 import viewModel.MainViewModel
 
 val names = listOf("Camiseta Primark", "Helado", "Cocacola", "Burger", "Zapatillas")
@@ -51,10 +56,9 @@ val names = listOf("Camiseta Primark", "Helado", "Cocacola", "Burger", "Zapatill
 @Composable
 fun MainView(viewModel: MainViewModel) {
 
-    // Obtén el ViewModel
-    val viewModel: MainViewModel = viewModel
 
-    // Llama al método para obtener la fecha y hora actual
+
+        // Llama al método para obtener la fecha y hora actual
     val time = viewModel.obtenerFechaHoraActual()
 
     // Estados para los campos del popup
@@ -64,6 +68,10 @@ fun MainView(viewModel: MainViewModel) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
+
+    val allItems = viewModel.obtenerTodasLasTransacciones().observeAsState(emptyList())
+    val gastos = viewModel.obtenerTransaccionesPorTipo("Gasto")
+    val ingresos = viewModel.obtenerTransaccionesPorTipo("Ingreso")
 
     Box(
         modifier = Modifier
@@ -109,7 +117,8 @@ fun MainView(viewModel: MainViewModel) {
         if (showPopup) {
             Popup(
                 onDismissRequest = { showPopup = false }, // Cierra el popup cuando se haga clic fuera
-                alignment = Alignment.Center // Centra el popup en la pantalla
+                alignment = Alignment.Center, // Centra el popup en la pantalla
+                offset = IntOffset(0, 0) // Desplaza el popup a la posición deseada
             ) {
                 // Contenido del popup
                 Surface(
@@ -132,7 +141,7 @@ fun MainView(viewModel: MainViewModel) {
 
                         // Aquí puedes añadir más campos, como TextField para entrada de texto
                         OutlinedTextField(
-                            value = "", // Aquí puedes agregar el estado para el campo
+                            value = title, // Aquí puedes agregar el estado para el campo
                             onValueChange = { /* Actualiza el estado con el valor ingresado */ },
                             label = { Text("Titulo") },
                             modifier = Modifier.fillMaxWidth()
@@ -141,7 +150,7 @@ fun MainView(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedTextField(
-                            value = "", // Aquí puedes agregar el estado para el campo
+                            value = description, // Aquí puedes agregar el estado para el campo
                             onValueChange = { /* Actualiza el estado con el valor ingresado */ },
                             label = { Text("Descripción") },
                             modifier = Modifier.fillMaxWidth()
@@ -150,7 +159,7 @@ fun MainView(viewModel: MainViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         OutlinedTextField(
-                            value = "", // Otro campo de texto para cantidad, etc.
+                            value = amount, // Otro campo de texto para cantidad, etc.
                             onValueChange = { /* Actualiza el estado con el valor ingresado */ },
                             label = { Text("Cantidad") },
                             modifier = Modifier.fillMaxWidth()
@@ -223,7 +232,8 @@ fun MainView(viewModel: MainViewModel) {
 
                             Button(
                                 onClick = {
-                                    // Acción para añadir el gasto
+                                    var item = Transaction(name = title, description = description,date= viewModel.obtenerFechaHoraActual(), amount =  amount.toDouble(),type = selectedOption)
+                                    viewModel.insertarTransaccion(item)
                                     showPopup = false // Cierra el popup
                                 }
                             ) {
@@ -264,10 +274,11 @@ fun ItemList(name: String, time: String) {
 }
 
 
-
+/*
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Composable
 fun PreviewMinView(){
-    MainView(MainViewModel())
+    MainView(MainViewModel(transaccionDao))
 }
+*/

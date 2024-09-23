@@ -6,7 +6,10 @@ import androidx.room.TypeConverters
 
 
 @Database(entities = [Transaction::class], version = 1, exportSchema = false)
-@TypeConverters(Converters::class) // Aquí registras los TypeConverters
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transaccionDao(): TransaccionDao
+
+    companion object {
+        const val DATABASE_NAME = "app_database"
+    }
 }
