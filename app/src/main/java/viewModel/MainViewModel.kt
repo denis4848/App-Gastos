@@ -18,6 +18,9 @@ class MainViewModel(private val transaccionDao: TransaccionDao): ViewModel() {
     // LiveData para obtener todas las transacciones
     val todasLasTransacciones: LiveData<List<Transaction>> = transaccionDao.obtenerTodasLasTransacciones()
 
+    var total: Double = 0.0
+
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun obtenerFechaHoraActual(): String {
         return dateTimeModel.obtenerFechaHoraActual()

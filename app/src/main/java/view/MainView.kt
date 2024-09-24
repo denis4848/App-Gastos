@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,9 +58,12 @@ import viewModel.MainViewModel
 @Composable
 fun MainView(viewModel: MainViewModel) {
 
-    // Observa allItems como LiveData
+    // Observing the data from the ViewModel as LiveData
     val allItems by viewModel.obtenerTodasLasTransacciones().observeAsState(emptyList())
+    val gastos by viewModel.obtenerTransaccionesPorTipo("Gasto").observeAsState(emptyList())
+    val ingresos by viewModel.obtenerTransaccionesPorTipo("Ingreso").observeAsState(emptyList())
 
+    // State variables for controlling UI elements
     var showDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
@@ -67,6 +72,8 @@ fun MainView(viewModel: MainViewModel) {
     var description by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
 
+
+    // Main container box with background and padding
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -77,6 +84,7 @@ fun MainView(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(30.dp)
         ) {
+            // Header Text
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -90,6 +98,7 @@ fun MainView(viewModel: MainViewModel) {
                 )
             }
 
+            // List of items displayed in a LazyColumn
             LazyColumn {
                 items(allItems) { transaction ->
                     ItemList(transaction, viewModel) {
@@ -97,10 +106,9 @@ fun MainView(viewModel: MainViewModel) {
                     }
                 }
             }
-
         }
 
-        // Botón flotante para abrir el diálogo
+        // Floating button to open the dialog for adding a new item
         FloatingActionButton(
             onClick = { showDialog = true },
             contentColor = Color.White,
@@ -112,7 +120,7 @@ fun MainView(viewModel: MainViewModel) {
             Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
         }
 
-        // Diálogo para añadir nuevo gasto
+        // Dialog for adding a new transaction
         if (showDialog) {
             Dialog(
                 onDismissRequest = { showDialog = false },
@@ -128,6 +136,7 @@ fun MainView(viewModel: MainViewModel) {
                     Column(
                         modifier = Modifier.padding(16.dp)
                     ) {
+                        // Title of the dialog
                         Text(
                             text = "Añadir nuevo gasto",
                             fontSize = 20.sp,
@@ -135,6 +144,7 @@ fun MainView(viewModel: MainViewModel) {
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
 
+                        // Input fields for the new transaction
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
@@ -142,14 +152,7 @@ fun MainView(viewModel: MainViewModel) {
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
 
-                        OutlinedTextField(
-                            value = description,
-                            onValueChange = { description = it },
-                            label = { Text("Descripción") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -162,6 +165,7 @@ fun MainView(viewModel: MainViewModel) {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Dropdown menu to select the type of transaction
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Button(
                                 onClick = { expanded = true },
@@ -213,6 +217,7 @@ fun MainView(viewModel: MainViewModel) {
                             }
                         }
 
+                        // Buttons for cancel and confirm actions
                         Row(
                             horizontalArrangement = Arrangement.End,
                             modifier = Modifier.fillMaxWidth()
@@ -225,14 +230,22 @@ fun MainView(viewModel: MainViewModel) {
 
                             Button(
                                 onClick = {
+                                    // Show error if any field is empty
                                     if (title.isBlank() || description.isBlank() || amount.isBlank()) {
                                         showErrorDialog = true
                                     } else {
+                                        if (selectedOption == "Gasto"){
+                                            viewModel.total -= amount.toDouble()
+                                        }else{
+                                            viewModel.total += amount.toDouble()
+                                        }
+                                        // Create a new transaction and add it to the ViewModel
                                         val item = Transaction(
                                             name = title,
                                             description = description,
                                             date = viewModel.obtenerFechaHoraActual(),
                                             amount = amount.toDouble(),
+                                            total = viewModel.total,
                                             type = selectedOption
                                         )
                                         viewModel.insertarTransaccion(item)
@@ -251,7 +264,7 @@ fun MainView(viewModel: MainViewModel) {
             }
         }
 
-        // Diálogo de error
+        // Error dialog for missing fields
         AnimatedVisibility(
             visible = showErrorDialog,
             enter = fadeIn(),
@@ -265,20 +278,15 @@ fun MainView(viewModel: MainViewModel) {
             )
         }
 
-        // Cerrar el diálogo automáticamente después de 3 segundos
+        // Auto-close the error dialog after 3 seconds
         LaunchedEffect(key1 = showErrorDialog) {
             if (showErrorDialog) {
                 delay(500)
                 showErrorDialog = false
             }
         }
-
     }
 }
-
-
-
-
 
 @Composable
 fun ItemList(
@@ -286,26 +294,67 @@ fun ItemList(
     viewModel: MainViewModel,
     onDeleteClick: () -> Unit
 ) {
+    // Determine the color based on the transaction type
+    val colorGasto = if (transaction.type == "Gasto") "#FF0000" else "#00FF00"
+
+    // Row for each transaction item in the list
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween, // Add this line
-        modifier = Modifier.fillMaxWidth() // Add this line
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .background(Color(0xFFC4C4C4), shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = 5.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = transaction.date,
-                color = Color(0xFF02144B),
-                fontSize = 12.sp,
-                fontWeight = FontWeight(weight = 880),
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            Text(
-                text = transaction.name,
-                fontSize = 20.sp,
-                fontWeight = FontWeight(weight = 400),
-                modifier = Modifier.padding(vertical = 5.dp)
-            )
+        // Left section with date and total in a Column
+        Column(
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.weight(1f).padding(5.dp) // Make this section take available space
+        ) {
+            // First Row with date and total aligned to the right
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth() // Fill the available width
+            ) {
+                Text(
+                    text = transaction.date.substring(0, 11),
+                    color = Color(0xFF02144B),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight(weight = 880),
+                    modifier = Modifier.padding(end = 16.dp)
+                )
+                Text(
+                    text = transaction.total.toString() + "€",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight(weight = 400)
+                )
+            }
+
+            // Second Row with name and amount aligned to the right
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth() // Fill the available width
+            ) {
+                Text(
+                    text = transaction.name,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight(weight = 400),
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Text(
+                    text = transaction.amount.toString() + "€",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight(weight = 400),
+                    color = Color(android.graphics.Color.parseColor(colorGasto))
+                )
+            }
         }
+
+        // Right section with delete button
         IconButton(onClick = onDeleteClick) {
             Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Red)
         }

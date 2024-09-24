@@ -10,7 +10,7 @@ class DateTimeModel {
     @RequiresApi(Build.VERSION_CODES.O)
     fun obtenerFechaHoraActual(): String {
         val currentDateTime = ZonedDateTime.now(ZoneId.systemDefault())
-        val format = DateTimeFormatter.ofPattern("dd-MM HH:mm")
+        val format = DateTimeFormatter.ofPattern("dd-MM HH:mm:ss")
         return currentDateTime.format(format)
     }
 }
